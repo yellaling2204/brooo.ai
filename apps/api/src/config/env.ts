@@ -12,8 +12,7 @@ export const ENV = {
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'dummy-anon-key',
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || 'dummy-service-key',
   
-  // AI Config
-  AI_PROVIDER: (process.env.AI_PROVIDER || 'openai') as 'openai' | 'gemini',
+  AI_PROVIDER: (process.env.AI_PROVIDER || 'openai') as 'openai' | 'gemini' | 'mock',
   
   // OpenAI
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',

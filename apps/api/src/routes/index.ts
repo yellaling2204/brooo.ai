@@ -10,8 +10,31 @@ import { getMemoryStats, queryMemories, clearMemories } from '../controllers/mem
 import { supabaseAdmin } from '../config/supabase';
 
 const upload = multer({
-  limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
 });
+
+const uploadMiddleware = (req: any, res: any, next: any) => {
+  upload.single('file')(req, res, (err: any) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'FILE_TOO_LARGE', message: 'File size exceeds maximum limit of 10 MB.' },
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        error: { code: 'UPLOAD_ERROR', message: err.message },
+      });
+    } else if (err) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'UPLOAD_ERROR', message: err.message },
+      });
+    }
+    next();
+  });
+};
 
 export const apiRouter = Router();
 
@@ -24,7 +47,7 @@ apiRouter.get('/health', (_req, res) => {
 apiRouter.use(requireAuth);
 
 // 1. Ingestion / AI Inbox
-apiRouter.post('/inbox/send', upload.single('file'), handleInboxSend);
+apiRouter.post('/inbox/send', uploadMiddleware, handleInboxSend);
 
 // 2. Action Engine
 apiRouter.get('/actions', listActions);

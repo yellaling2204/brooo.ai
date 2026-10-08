@@ -41,8 +41,8 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   // Dev token support in development mode for easy local Postman testing
   if (ENV.NODE_ENV === 'development' && (token === 'dev-token' || token === 'test-token')) {
     req.user = {
-      id: (req.headers['x-dev-user-id'] as string) || '00000000-0000-0000-0000-000000000000',
-      email: 'dev@brooo.ai',
+      id: (req.headers['x-dev-user-id'] as string) || '17c8216f-74a7-49ec-8106-9e1b4a592732',
+      email: 'user@brooo.ai',
       jwtToken: token,
     };
     return next();

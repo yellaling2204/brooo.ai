@@ -89,6 +89,7 @@ export class ActionEngineService {
   async processInput(params: ProcessInputParams): Promise<{
     extraction: BroooExtractionResponse;
     actionIds: string[];
+    broooMessage: string;
   }> {
     const { userId, sourceId, documentId, rawText, images, tier = 'fast' } = params;
 
@@ -233,7 +234,80 @@ export class ActionEngineService {
     return {
       extraction,
       actionIds,
+      broooMessage: formatBroooMessage(extraction),
     };
   }
 }
+
+export function formatBroooMessage(extraction: BroooExtractionResponse): string {
+  if (extraction.is_suspicious) {
+    const reasons = extraction.suspicion_reasons.map((r) => `• ${r}`).join('\n');
+    return `⚠️ Heads up brooo! This looks suspicious.\n\nRed flags detected:\n${reasons}\n\nBe careful — I would not click any links or send money.`;
+  }
+
+  const primaryAction = extraction.actions[0];
+  if (!primaryAction) {
+    return extraction.overall_summary || 'Got it brooo. Everything is saved!';
+  }
+
+  // Interview detected
+  if (primaryAction.type === 'appointment' || (extraction.category === 'career' && primaryAction.title.toLowerCase().includes('interview'))) {
+    const dateStr = primaryAction.date ? `Date: ${primaryAction.date}` : '';
+    const timeStr = primaryAction.time ? `at ${primaryAction.time}` : '';
+    const when = [dateStr, timeStr].filter(Boolean).join(' ');
+    const requirements = primaryAction.entities?.requirements
+      ? (Array.isArray(primaryAction.entities.requirements)
+          ? primaryAction.entities.requirements
+          : [primaryAction.entities.requirements]
+        ).map((r: string) => `• ${r}`).join('\n')
+      : null;
+
+    let msg = `Brooo found an interview!\n\n${primaryAction.title}\n${when ? `📅 ${when}` : ''}`;
+    if (requirements) {
+      msg += `\n\nYou should prepare for:\n${requirements}`;
+    }
+    msg += `\n\nI've saved the details for you.`;
+    return msg;
+  }
+
+  // Job description
+  if (primaryAction.type === 'application' || (extraction.category === 'career' && primaryAction.entities?.company)) {
+    const company = primaryAction.entities?.company || 'Company';
+    const role = primaryAction.entities?.role || 'Role';
+    const deadline = primaryAction.date ? `Deadline: ${primaryAction.date}` : '';
+    const salary = primaryAction.entities?.salary ? `Compensation: ${primaryAction.entities.salary}` : '';
+    const skills = primaryAction.entities?.skills
+      ? (Array.isArray(primaryAction.entities.skills)
+          ? primaryAction.entities.skills
+          : [primaryAction.entities.skills]
+        ).map((s: string) => `• ${s}`).join('\n')
+      : null;
+
+    let msg = `Brooo found a job opportunity! 💼\n\n${role} at ${company}\n${deadline}\n${salary}`;
+    if (skills) {
+      msg += `\n\nKey skills:\n${skills}`;
+    }
+    msg += `\n\nI've saved the details and added a task to your list.`;
+    return msg;
+  }
+
+  // Insurance renewal
+  if (primaryAction.type === 'renewal' || extraction.category === 'insurance') {
+    const provider = primaryAction.entities?.provider || 'Insurance';
+    const policy = primaryAction.entities?.policy_number ? `Policy: ${primaryAction.entities.policy_number}` : '';
+    const expiry = primaryAction.date ? `Expires: ${primaryAction.date}` : '';
+    return `Brooo spotted an insurance renewal! 🛡️\n\n${primaryAction.title}\n${provider} ${policy}\n📅 ${expiry}\n\nI've flagged this so your coverage doesn't lapse.`;
+  }
+
+  // Bill payment
+  if (primaryAction.type === 'payment' || extraction.category === 'bills') {
+    const biller = primaryAction.entities?.biller || 'Utility';
+    const amount = primaryAction.entities?.amount_due || 'Pending Amount';
+    const due = primaryAction.date ? `Due by: ${primaryAction.date}` : '';
+    return `Brooo found a bill! 💳\n\n${primaryAction.title}\n${biller} — ${amount}\n📅 ${due}\n\nI've scheduled a payment reminder for you.`;
+  }
+
+  return extraction.overall_summary || `Got it brooo! I've created an action for "${primaryAction.title}".`;
+}
+
 
