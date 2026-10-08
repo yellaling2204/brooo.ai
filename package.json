@@ -1,0 +1,26 @@
+{
+  "name": "brooo-ai-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "brooo.ai — Personal AI Assistant / AI Life Operating System",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rimraf node_modules",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3",
+    "turbo": "^2.4.4",
+    "typescript": "^5.8.2"
+  },
+  "packageManager": "pnpm@12.10.1",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
+

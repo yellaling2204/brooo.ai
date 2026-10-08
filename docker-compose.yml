@@ -1,0 +1,16 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=development
+      - SUPABASE_URL=http://host.docker.internal:54321
+      - SUPABASE_SERVICE_ROLE_KEY=dummy-service-key
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
