@@ -17,8 +17,8 @@ export const ENV = {
   
   // OpenAI
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
-  OPENAI_MODEL_FAST: process.env.OPENAI_MODEL_FAST || 'gpt-5.6-luna',
-  OPENAI_MODEL_COMPLEX: process.env.OPENAI_MODEL_COMPLEX || 'gpt-5.6-terra',
+  OPENAI_MODEL_FAST: process.env.OPENAI_FAST_MODEL || process.env.OPENAI_MODEL_FAST || 'gpt-4o-mini',
+  OPENAI_MODEL_COMPLEX: process.env.OPENAI_COMPLEX_MODEL || process.env.OPENAI_MODEL_COMPLEX || 'gpt-4o',
   OPENAI_EMBEDDING_MODEL: process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
 
   // Gemini
