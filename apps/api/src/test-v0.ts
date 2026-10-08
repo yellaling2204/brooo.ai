@@ -47,6 +47,8 @@ async function runV0Test() {
     console.log(`  Type:       ${act.type}`);
     console.log(`  Title:      ${act.title}`);
     console.log(`  Priority:   ${act.priority}`);
+    console.log(`  Date:       ${act.date || 'null'}`);
+    console.log(`  Time:       ${act.time || 'null'}`);
     console.log(`  Summary:    ${act.summary}`);
     console.log(`  Confidence: ${act.confidence * 100}%`);
     console.log(`  Entities:   ${JSON.stringify(act.entities)}`);
@@ -68,3 +70,4 @@ runV0Test().catch((err) => {
   console.error('Error during V0 test:', err);
   process.exit(1);
 });
+

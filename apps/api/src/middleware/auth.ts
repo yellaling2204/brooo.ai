@@ -38,6 +38,16 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   const token = authHeader.split(' ')[1];
 
+  // Dev token support in development mode for easy local Postman testing
+  if (ENV.NODE_ENV === 'development' && (token === 'dev-token' || token === 'test-token')) {
+    req.user = {
+      id: (req.headers['x-dev-user-id'] as string) || '00000000-0000-0000-0000-000000000000',
+      email: 'dev@brooo.ai',
+      jwtToken: token,
+    };
+    return next();
+  }
+
   try {
     const { data, error } = await supabaseAdmin.auth.getUser(token);
 

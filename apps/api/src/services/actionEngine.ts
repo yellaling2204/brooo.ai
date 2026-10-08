@@ -14,7 +14,8 @@ Your job is to read raw input (text messages, email receipts, screenshots, docum
    - title: clear, active headline (e.g. "Prepare for Google Interview", "Pay Electricity Bill")
    - summary: 1-2 sentence context explaining why this matters
    - priority: low | medium | high | urgent
-   - deadline: ISO 8601 string if date/time exists, else null. (NEVER guess deadlines).
+   - date: YYYY-MM-DD if explicit date is stated or clearly implied, else null. (NEVER guess dates).
+   - time: HH:mm in 24h format if explicit time is stated (e.g. "11:00" for 11 AM), else null. (NEVER invent minutes or seconds).
    - confidence: float between 0.0 and 1.0
    - requires_confirmation: boolean (true if irreversible, financial, or sensitive)
    - entities: key-value dictionary (company, role, amount, date, time, location, etc.)
@@ -25,6 +26,22 @@ Your job is to read raw input (text messages, email receipts, screenshots, docum
 
 Respond strictly with valid JSON conforming to the schema.
 `;
+
+export function resolveDeterministicDeadline(date?: string | null, time?: string | null, fallbackDeadline?: string | null): string | null {
+  if (date) {
+    const formattedTime = time && /^\d{1,2}:\d{2}$/.test(time) 
+      ? (time.length === 4 ? `0${time}:00.000Z` : `${time}:00.000Z`) 
+      : '09:00:00.000Z';
+    return `${date}T${formattedTime}`;
+  }
+  if (fallbackDeadline) {
+    try {
+      const d = new Date(fallbackDeadline);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    } catch {}
+  }
+  return null;
+}
 
 export interface ProcessInputParams {
   userId: string;
@@ -76,6 +93,14 @@ export class ActionEngineService {
         act.type === 'renewal' ||
         extraction.is_suspicious;
 
+      const resolvedDeadline = resolveDeterministicDeadline(act.date, act.time, act.deadline);
+
+      const actionEntities = {
+        ...(act.entities || {}),
+        ...(act.date ? { date: act.date } : {}),
+        ...(act.time ? { time: act.time } : {}),
+      };
+
       const { data: insertedAction, error: actionError } = await supabaseAdmin
         .from('actions')
         .insert({
@@ -86,10 +111,10 @@ export class ActionEngineService {
           title: act.title,
           summary: act.summary,
           priority: act.priority,
-          deadline: act.deadline ? new Date(act.deadline).toISOString() : null,
+          deadline: resolvedDeadline,
           confidence: act.confidence,
           requires_confirmation: requiresConfirmation,
-          entities: act.entities || {},
+          entities: actionEntities,
           status: 'pending',
         })
         .select('id')
@@ -106,17 +131,17 @@ export class ActionEngineService {
               action_id: insertedAction.id,
               title: act.title,
               notes: act.summary,
-              due_date: act.deadline ? new Date(act.deadline).toISOString() : null,
+              due_date: resolvedDeadline,
               priority: act.priority,
             });
           }
 
-          if (act.deadline && (act.type === 'reminder' || act.type === 'appointment' || act.type === 'deadline')) {
+          if (resolvedDeadline && (act.type === 'reminder' || act.type === 'appointment' || act.type === 'deadline')) {
             await supabaseAdmin.from('reminders').insert({
               user_id: userId,
               action_id: insertedAction.id,
               title: act.title,
-              scheduled_at: new Date(act.deadline).toISOString(),
+              scheduled_at: resolvedDeadline,
               status: 'pending',
             });
           }

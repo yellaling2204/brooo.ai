@@ -18,13 +18,14 @@ export class MockAIProvider implements AIProvider {
           title: 'Prepare for ABC Technologies interview',
           summary: 'Prepare system design and SQL before the interview on Monday at 11 AM.',
           priority: 'high',
-          deadline: new Date(Date.now() + 86400000 * 4).toISOString(),
+          date: '2026-10-12',
+          time: '11:00',
+          deadline: null,
           confidence: 0.96,
           requires_confirmation: false,
           entities: {
             company: 'ABC Technologies',
             role: 'Software Engineer',
-            time: '11:00 AM',
             requirements: ['System Design', 'SQL'],
           },
         },
@@ -87,3 +88,4 @@ export class MockAIProvider implements AIProvider {
     return request.texts.map(() => new Array(1536).fill(0.01));
   }
 }
+
