@@ -27,13 +27,43 @@ Your job is to read raw input (text messages, email receipts, screenshots, docum
 Respond strictly with valid JSON conforming to the schema.
 `;
 
-export function resolveDeterministicDeadline(date?: string | null, time?: string | null, fallbackDeadline?: string | null): string | null {
-  if (date) {
-    const formattedTime = time && /^\d{1,2}:\d{2}$/.test(time) 
-      ? (time.length === 4 ? `0${time}:00.000Z` : `${time}:00.000Z`) 
-      : '09:00:00.000Z';
-    return `${date}T${formattedTime}`;
+function getTimezoneOffsetMinutes(date: Date, timezone: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'shortOffset',
+    }).formatToParts(date);
+    const tzPart = parts.find((p) => p.type === 'timeZoneName')?.value || 'GMT';
+    const match = tzPart.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+    if (!match) return 0;
+    const sign = match[1] === '+' ? 1 : -1;
+    const hours = parseInt(match[2], 10);
+    const minutes = match[3] ? parseInt(match[3], 10) : 0;
+    return sign * (hours * 60 + minutes);
+  } catch {
+    return 0;
   }
+}
+
+export function resolveDeterministicDeadline(
+  date?: string | null,
+  time?: string | null,
+  timezone: string = 'Asia/Kolkata',
+  fallbackDeadline?: string | null
+): string | null {
+  if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [y, m, d] = date.split('-').map(Number);
+    const timeFormatted = time && /^\d{1,2}:\d{2}$/.test(time)
+      ? (time.length === 4 ? `0${time}` : time)
+      : '09:00';
+    const [hh, mm] = timeFormatted.split(':').map(Number);
+
+    const approxUtc = new Date(Date.UTC(y, m - 1, d, hh, mm));
+    const offsetMinutes = getTimezoneOffsetMinutes(approxUtc, timezone);
+    const utcMillis = approxUtc.getTime() - offsetMinutes * 60 * 1000;
+    return new Date(utcMillis).toISOString();
+  }
+
   if (fallbackDeadline) {
     try {
       const d = new Date(fallbackDeadline);
@@ -50,6 +80,7 @@ export interface ProcessInputParams {
   rawText: string;
   images?: Array<{ mimeType: string; base64: string }>;
   tier?: 'fast' | 'complex';
+  userTimezone?: string;
 }
 
 export class ActionEngineService {
@@ -84,6 +115,19 @@ export class ActionEngineService {
 
     const actionIds: string[] = [];
 
+    // Resolve user timezone from profile or default to Asia/Kolkata
+    let userTz = params.userTimezone || 'Asia/Kolkata';
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('timezone')
+        .eq('id', userId)
+        .single();
+      if (profile?.timezone) {
+        userTz = profile.timezone;
+      }
+    } catch {}
+
     // 3. Persist extracted actions
     for (const act of extraction.actions) {
       // Risk check & confirmation rules
@@ -93,12 +137,13 @@ export class ActionEngineService {
         act.type === 'renewal' ||
         extraction.is_suspicious;
 
-      const resolvedDeadline = resolveDeterministicDeadline(act.date, act.time, act.deadline);
+      const resolvedDeadline = resolveDeterministicDeadline(act.date, act.time, userTz, act.deadline);
 
       const actionEntities = {
         ...(act.entities || {}),
         ...(act.date ? { date: act.date } : {}),
         ...(act.time ? { time: act.time } : {}),
+        timezone: userTz,
       };
 
       const { data: insertedAction, error: actionError } = await supabaseAdmin

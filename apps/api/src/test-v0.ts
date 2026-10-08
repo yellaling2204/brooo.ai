@@ -1,5 +1,5 @@
 import { getAIProvider } from './ai';
-import { BROOO_EXTRACTOR_SYSTEM_PROMPT } from './services/actionEngine';
+import { BROOO_EXTRACTOR_SYSTEM_PROMPT, resolveDeterministicDeadline } from './services/actionEngine';
 import { BroooExtractionResponseSchema } from '@brooo/validation';
 
 async function runV0Test() {
@@ -49,6 +49,7 @@ async function runV0Test() {
     console.log(`  Priority:   ${act.priority}`);
     console.log(`  Date:       ${act.date || 'null'}`);
     console.log(`  Time:       ${act.time || 'null'}`);
+    console.log(`  UTC (IST):  ${resolveDeterministicDeadline(act.date, act.time, 'Asia/Kolkata')}`);
     console.log(`  Summary:    ${act.summary}`);
     console.log(`  Confidence: ${act.confidence * 100}%`);
     console.log(`  Entities:   ${JSON.stringify(act.entities)}`);
